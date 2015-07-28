@@ -1,0 +1,55 @@
+#!/bin/bash
+
+:<<'END'
+Scenario: Execute tests in parallel by a set of BPEL engines
+  Given a set of tests {a, b, c, d, ...}
+  And a set of BPEL Engines {eng1, eng2, eng3, ...}
+  When parallel execution is triggered
+  Then each test is executed in parallel in following fashion:
+	- Take 1st test from the test set and execute that by all BPEL engines in parallel
+	- Take 2nd test from the test set and execute that by all BPEL engines in parallel
+	- So on...
+END
+
+# Dummy test list; to be replaced with actual list
+TESTS=(a b c d)
+
+# Spin up all the BPEL engines
+# Dummy Engine list; to be replaced with actual list
+ENGINE_LIST=(eng1 eng2 eng3 eng4 eng5)
+for engine in "${ENGINE_LIST[@]}";
+do
+	# Figure out the appropriate default command
+	echo "docker run $engine --name=$engine sh betsy <default_cmd>"
+done
+
+for test_name in "${TESTS[@]}";
+do
+	# Prepare parallel command for all BPEL engines
+	CMD=""
+	for engine in "${ENGINE_LIST[@]}";
+	do
+		CMD+="docker exec $engine sh betsy $test_name & "
+	done
+	# Strip off last ampersand
+	SANITIZE_CMD=${CMD::-3}
+	echo $SANITIZE_CMD
+	# Kick off parallel execution
+	#$SANITIZE_CMD
+done
+
+
+:<<'END'
+# TODO: Figure out strategies to
+#	1. Save results
+#	2. Extract logs
+#	3. Aggregate logs
+source common.sh
+
+params=`echo "$*" | tr ' =' '_'`
+folder=results/$params-`date +%s`
+container=`docker ps -alq`
+
+extractLogs "$container" "$folder"
+open "$folder/test/reports/results.html"
+END
